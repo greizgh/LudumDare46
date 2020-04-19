@@ -1,0 +1,140 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://scn/bg.tscn" type="PackedScene" id=2]
+[ext_resource path="res://heart_theme.tres" type="Theme" id=3]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends Node2D
+
+# number of safe ticks to spawn a new heart
+const NEXT_HEART_TICKS = 3
+
+# vomit
+const center_offset = [
+	[160],
+	[120, 200],
+	[80, 160, 240],
+	[40, 120, 200, 280]
+]
+
+var heart_scn = preload(\"res://scn/heart.tscn\")
+var hearts = []
+var current_heart
+
+var safe_ticks: int = 0
+var selected_idx: int = 0
+
+onready var start: float = OS.get_ticks_msec()
+
+func _ready() -> void:
+	add_heart()
+	current_heart = hearts[0]
+	current_heart.focused = true
+
+func _process(_delta) -> void:
+	if Input.is_action_just_pressed(\"pump\"):
+		get_node(\"/root/global\").nb_pulse += 1
+		current_heart.beat()
+	if Input.is_action_just_pressed(\"focus_left\"):
+		focus_idx((selected_idx - 1) % hearts.size())
+	elif Input.is_action_just_pressed(\"focus_right\"):
+		focus_idx((selected_idx + 1) % hearts.size())
+
+func focus_idx(index: int) -> void:
+	selected_idx = index
+	current_heart.focused = false
+	current_heart = hearts[index]
+	current_heart.focused = true
+
+
+func _on_heart_arrest() -> void:
+	$\"/root/global\".elapsed_time = (OS.get_ticks_msec() - start) / 1000
+	get_tree().change_scene(\"res://scn/gameover.tscn\")
+
+
+func _on_heart_safe():
+	safe_ticks += 1
+	if (safe_ticks >= NEXT_HEART_TICKS):
+		if not $\"/root/global\".promoted:
+			promote()
+		if hearts.size() > 3:
+			$\"/root/global\".epic_win = true
+			_on_heart_arrest()
+		else:
+			add_heart()
+
+func add_heart() -> void:
+	$\"/root/global\".nb_hearts += 1
+	var new_heart = heart_scn.instance()
+	new_heart.position.y = 126
+	new_heart.connect(\"arrest\", self, \"_on_heart_arrest\")
+	new_heart.connect(\"safe\", self, \"_on_heart_safe\")
+	hearts.push_back(new_heart)
+	for i in range(0, hearts.size()):
+		var heart = hearts[i]
+		heart.position.x = center_offset[hearts.size() - 1][i]
+	$hearts.add_child(new_heart)
+
+func promote() -> void:
+	$\"/root/global\".promoted = true
+	get_tree().paused = true
+	$hearts.visible = false
+	$promote.visible = true
+
+
+func _on_promote_ack():
+	$hearts.visible = true
+	$promote.visible = false
+	get_tree().paused = false
+"
+
+[sub_resource type="GDScript" id=2]
+script/source = "extends CenterContainer
+
+signal ack
+
+func _process(_delta) -> void:
+	if Input.is_action_just_pressed(\"focus_left\") or Input.is_action_just_pressed(\"focus_right\"):
+		emit_signal(\"ack\")
+"
+
+[node name="Node2D" type="Node2D"]
+script = SubResource( 1 )
+
+[node name="bg" parent="." instance=ExtResource( 2 )]
+
+[node name="promote" type="CenterContainer" parent="."]
+pause_mode = 2
+visible = false
+margin_left = 2.0
+margin_top = 12.0
+margin_right = 318.0
+margin_bottom = 238.0
+script = SubResource( 2 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="promote"]
+margin_left = 46.0
+margin_top = 59.0
+margin_right = 270.0
+margin_bottom = 166.0
+theme = ExtResource( 3 )
+text = "GOOD JOB !
+
+You are promoted to:
+
+Cloud Based AI infused
+Pacemaker
+
+Keep 'em alive
+
+Press left or right to switch hearts"
+align = 1
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="hearts" type="Node2D" parent="."]
+[connection signal="ack" from="promote" to="." method="_on_promote_ack"]

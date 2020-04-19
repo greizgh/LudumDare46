@@ -1,0 +1,154 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://heart_theme.tres" type="Theme" id=1]
+[ext_resource path="res://scn/bg.tscn" type="PackedScene" id=3]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends Node2D
+
+func _ready() -> void:
+	set_process(false)
+	$AnimationPlayer.connect(\"animation_finished\", self, \"on_anim_end\", [], CONNECT_ONESHOT)
+	$AnimationPlayer.play(\"intro\")
+	
+func on_anim_end(_anim: AnimationPlayer) -> void:
+	set_process(true)
+
+func _process(_delta: float) -> void:
+	if Input.is_action_just_pressed(\"pump\"):
+		get_tree().change_scene(\"res://scn/main.tscn\")
+"
+
+[sub_resource type="Animation" id=3]
+length = 2.0
+tracks/0/type = "value"
+tracks/0/path = NodePath("Control/you:visible")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.1 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("Control/are:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 0.279467 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("Control/a:visible")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0, 0.628841 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+tracks/3/type = "value"
+tracks/3/path = NodePath("Control/pacemaker:visible")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/keys = {
+"times": PoolRealArray( 0, 0.849374 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+tracks/4/type = "value"
+tracks/4/path = NodePath("Control/continue:visible")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/keys = {
+"times": PoolRealArray( 0, 1.6 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+
+[node name="Node2D" type="Node2D"]
+script = SubResource( 1 )
+
+[node name="Control" type="Control" parent="."]
+margin_right = 40.0
+margin_bottom = 40.0
+theme = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="TextureRect" parent="Control" instance=ExtResource( 3 )]
+
+[node name="you" type="Label" parent="Control"]
+visible = false
+margin_left = 42.97
+margin_top = 31.672
+margin_right = 84.97
+margin_bottom = 47.672
+text = "You"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="are" type="Label" parent="Control"]
+visible = false
+margin_left = 92.98
+margin_top = 56.278
+margin_right = 134.98
+margin_bottom = 72.278
+text = "are"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="a" type="Label" parent="Control"]
+visible = false
+margin_left = 141.859
+margin_top = 79.301
+margin_right = 181.859
+margin_bottom = 95.301
+text = "a"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="pacemaker" type="Label" parent="Control"]
+visible = false
+margin_left = 96.35
+margin_top = 113.122
+margin_right = 226.35
+margin_bottom = 129.122
+text = "pacemaker"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="continue" type="Label" parent="Control"]
+visible = false
+margin_left = 84.97
+margin_top = 201.0
+margin_right = 250.97
+margin_bottom = 217.0
+text = "Press SPACE !"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/intro = SubResource( 3 )

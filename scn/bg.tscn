@@ -1,0 +1,24 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://heart_theme.tres" type="Theme" id=1]
+[ext_resource path="res://assets/background.png" type="Texture" id=2]
+
+[node name="TextureRect" type="TextureRect"]
+margin_right = 320.0
+margin_bottom = 240.0
+texture = ExtResource( 2 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Label" type="Label" parent="."]
+modulate = Color( 0, 0, 0, 1 )
+margin_left = 2.0
+margin_top = 2.0
+margin_right = 82.0
+margin_bottom = 10.0
+theme = ExtResource( 1 )
+text = "Beat-o-matic"
+__meta__ = {
+"_edit_use_anchors_": false
+}

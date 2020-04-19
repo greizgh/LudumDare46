@@ -1,0 +1,298 @@
+[gd_scene load_steps=23 format=2]
+
+[ext_resource path="res://assets/heart_idle.png" type="Texture" id=1]
+[ext_resource path="res://assets/heart-beat.wav" type="AudioStream" id=2]
+[ext_resource path="res://assets/electrodes.png" type="Texture" id=3]
+[ext_resource path="res://assets/heartsection.png" type="Texture" id=4]
+[ext_resource path="res://heart_theme.tres" type="Theme" id=5]
+[ext_resource path="res://assets/risk-cross.png" type="Texture" id=6]
+[ext_resource path="res://assets/risk-cross-disabled.png" type="Texture" id=7]
+[ext_resource path="res://assets/ecg.png" type="Texture" id=8]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends Node2D
+
+# Number of values to keep (pulse regularity)
+const SLIDING_WINDOW_SIZE = 3
+# Update BPM every N second
+const BEAT_UPDATE_PERIOD: float = 1.0
+# arrest occur after N seconds of bad beat
+const ARREST_TIMEOUT: float = 5.0
+# allow up to N beats above or under target
+const BPM_TOLERANCE: int = 20
+const WARN_BEFORE_ARREST: int = 4
+# number of seconds without skipped beat to reduce the risk
+const FAILURE_COOLDOWN_DELAY: float = 15.0
+# emit signal this often (seconds) when heart is safe
+const SAFE_TICK_DELAY: float = 10.0
+
+export var focused: bool = false
+var isPumping = false
+var lastPulse: int = 0
+# keep track of last failure to allow reduce the risk
+var lastFail: float = 0.0
+var lastSafe: float = 0.0
+var lastPeriods = []
+var bpm: int = 0
+var beatUpdateCounter: float = 0.0
+var target: int = 0
+var warn: int = 0
+onready var bpm_label = get_node(\"ui/bpm_cntr/bpm\")
+onready var target_label = get_node(\"ui/bpm_cntr/target\")
+
+# Cardiac arrest is triggered when bpm is too far from target
+signal arrest
+# will regularly send safe signal if OK
+signal safe
+
+func _ready() -> void:
+	randomize()
+	target = 50 + randi() % 70
+	target_label.text = \"Targt: %s\" % target
+	$ui/risk_cntnr/arrest_warn.value = 0
+	$ui/risk_cntnr/arrest_warn.max_value = WARN_BEFORE_ARREST
+	set_process(true)
+
+func _process(delta: float) -> void:
+	update_focused()
+	var pulsePeriod = (OS.get_ticks_msec() - lastPulse) / 1000.0
+	if isPumping:
+		# TODO prevent pulsing again before anim end
+		isPumping = false
+		lastPulse = OS.get_ticks_msec()
+		lastPeriods.push_front(pulsePeriod)
+		lastPeriods = lastPeriods.slice(0, SLIDING_WINDOW_SIZE - 1)
+	beatUpdateCounter += delta
+	lastFail += delta
+	lastSafe += delta
+	if (beatUpdateCounter > BEAT_UPDATE_PERIOD):
+		beatUpdateCounter = 0
+		bpm = update_bpm(pulsePeriod)
+		bpm_label.text = \"BPM: %s\" % bpm
+		# idea: heart explosion animation when BPM too high
+		if bpm > target + BPM_TOLERANCE or bpm < target - BPM_TOLERANCE:
+			lastSafe = 0
+			warn += 1
+			lastFail = 0
+		if warn >= WARN_BEFORE_ARREST:
+			arrest()
+		$ui/risk_cntnr/arrest_warn.value = warn
+	if (lastFail > FAILURE_COOLDOWN_DELAY):
+		if warn > 0:
+			lastFail = 0
+			warn -= 1
+		$ui/risk_cntnr/arrest_warn.value = warn
+	if (lastSafe > SAFE_TICK_DELAY):
+		lastSafe = 0
+		emit_signal(\"safe\")
+
+
+func update_bpm(pulsePeriod: float) -> int:
+	var meanPeriod = 0
+	for p in lastPeriods:
+		meanPeriod += p/(SLIDING_WINDOW_SIZE + 1)
+	if lastPulse != 0:
+		meanPeriod += (pulsePeriod)/(SLIDING_WINDOW_SIZE + 1)
+	if meanPeriod > 0:
+		return round(1/(meanPeriod)*60) as int
+	return 0
+
+func update_focused() -> void:
+	if focused:
+		$border.modulate = \"#ff241f\"
+	else:
+		$border.modulate = \"#ffffff\"
+
+func beat() -> void:
+	isPumping = true
+	$AnimationPlayer.play(\"shock\")
+
+func arrest() -> void:
+	emit_signal(\"arrest\")
+	bpm = 0
+"
+
+[sub_resource type="AtlasTexture" id=3]
+atlas = ExtResource( 1 )
+region = Rect2( 0, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=4]
+atlas = ExtResource( 1 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=5]
+atlas = ExtResource( 1 )
+region = Rect2( 128, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=6]
+atlas = ExtResource( 1 )
+region = Rect2( 192, 0, 64, 64 )
+
+[sub_resource type="SpriteFrames" id=7]
+animations = [ {
+"frames": [ SubResource( 3 ), SubResource( 4 ), SubResource( 5 ), SubResource( 6 ) ],
+"loop": true,
+"name": "idle",
+"speed": 10.0
+} ]
+
+[sub_resource type="AtlasTexture" id=8]
+atlas = ExtResource( 3 )
+region = Rect2( 0, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=9]
+atlas = ExtResource( 3 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=10]
+atlas = ExtResource( 3 )
+region = Rect2( 128, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=11]
+atlas = ExtResource( 3 )
+region = Rect2( 192, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=12]
+atlas = ExtResource( 3 )
+region = Rect2( 320, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=13]
+atlas = ExtResource( 3 )
+region = Rect2( 384, 0, 64, 64 )
+
+[sub_resource type="SpriteFrames" id=14]
+animations = [ {
+"frames": [ SubResource( 8 ), SubResource( 9 ), SubResource( 10 ), SubResource( 11 ) ],
+"loop": true,
+"name": "idle",
+"speed": 5.0
+}, {
+"frames": [ SubResource( 12 ), SubResource( 13 ) ],
+"loop": true,
+"name": "shock",
+"speed": 5.0
+} ]
+
+[sub_resource type="Animation" id=15]
+resource_name = "shock"
+length = 0.5
+tracks/0/type = "value"
+tracks/0/path = NodePath("heart_anim/electrodes:animation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.18 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ "shock", "idle" ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("hb_player:playing")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 1,
+"values": [ true ]
+}
+
+[node name="root" type="Node2D"]
+position = Vector2( 0, 110 )
+script = SubResource( 1 )
+
+[node name="border" type="Sprite" parent="."]
+texture = ExtResource( 4 )
+
+[node name="hb_player" type="AudioStreamPlayer" parent="."]
+stream = ExtResource( 2 )
+
+[node name="ui" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = ExtResource( 5 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="risk_cntnr" type="VBoxContainer" parent="ui"]
+margin_left = -32.0
+margin_top = -105.0
+margin_right = 32.0
+margin_bottom = -85.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="arrest_label" type="Label" parent="ui/risk_cntnr"]
+margin_right = 64.0
+margin_bottom = 8.0
+text = "<3 attacks"
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="arrest_warn" type="TextureProgress" parent="ui/risk_cntnr"]
+margin_top = 12.0
+margin_right = 64.0
+margin_bottom = 28.0
+max_value = 4.0
+value = 1.0
+texture_under = ExtResource( 7 )
+texture_progress = ExtResource( 6 )
+__meta__ = {
+"_edit_lock_": true
+}
+
+[node name="bpm_cntr" type="VBoxContainer" parent="ui"]
+margin_left = -32.0
+margin_top = 87.0
+margin_right = 32.0
+margin_bottom = 107.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="target" type="Label" parent="ui/bpm_cntr"]
+margin_right = 64.0
+margin_bottom = 8.0
+text = "Targt: 109"
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="bpm" type="Label" parent="ui/bpm_cntr"]
+margin_top = 12.0
+margin_right = 64.0
+margin_bottom = 20.0
+text = "BPM: "
+__meta__ = {
+"_edit_lock_": true,
+"_edit_use_anchors_": false
+}
+
+[node name="heart_anim" type="AnimatedSprite" parent="."]
+position = Vector2( 0, -42 )
+frames = SubResource( 7 )
+animation = "idle"
+frame = 2
+playing = true
+
+[node name="electrodes" type="AnimatedSprite" parent="heart_anim"]
+frames = SubResource( 14 )
+animation = "idle"
+frame = 2
+playing = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/shock = SubResource( 15 )
+
+[node name="Sprite" type="Sprite" parent="."]
+position = Vector2( 0, 37 )
+texture = ExtResource( 8 )
